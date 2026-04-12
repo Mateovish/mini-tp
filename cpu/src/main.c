@@ -4,15 +4,28 @@ t_config* config;
 char* ip_kernel;
 int puerto_kernel;
 t_log_level log_level;
-t_log* logger;
 int socket_kernel;
 
 
 int main(int argc, char* argv[]) {
     saludar("cpu");
+    
+    // 1. Primero cargamos la config
     ObtenerConfig();
-    socket_kernel = CrearConexion (ip_kernel, puerto_kernel);
-    logger = log_create ("cpu.log", "CPU", true, log_level);
+    
+    // 2. Creamos el logger para poder registrar lo que pase en la conexión
+    logger = log_create("cpu.log", "CPU", true, log_level);
+    
+    // 3. Nos conectamos
+    char* puerto_kernel_string = string_itoa(puerto_kernel);
+    socket_kernel = CrearConexion(ip_kernel, puerto_kernel_string);
+    free(puerto_kernel_string);
+    
+    log_info(logger, "Me conecté al Kernel existosamente!");
+    
+    // IMPORTANTE: Un pequeño freno temporal
+    sleep(10); 
+    
     return 0;
 }
 
