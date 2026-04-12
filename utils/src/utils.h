@@ -12,6 +12,8 @@
 
 extern t_log* logger;
 void saludar(char* quien);
+void RecibirEntero (int socket_emisor);
+void EnviarEntero (int socket_receptor, int ent);
 int IniciarServidor (int puerto);
 int EsperarConexion (int socket_servidor);
 int CrearConexion (char* ip, char* puerto);
