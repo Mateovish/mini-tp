@@ -6,5 +6,9 @@
 void ObtenerConfig ();
 void EscribirMemoria (int direccion, char* contenido);
 char* LeerMemoria (int direccion, int tamanio);
+bool ReservarMemoriaParaProceso (int pid, int tamanio);
+int ContarDigitos (int numero);
+void LiberarProceso(int pid);
+void CrearBitmap ();
 
 #endif

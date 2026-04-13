@@ -7,30 +7,67 @@ int socket_kernel;
 int socket_cpu;
 int tam_memo;
 void* memoria_fisica;
-int tam_pag;
+int tam_pag = 8;
 t_bitarray* bitmap;
 t_dictionary* de_pid_a_tabla;
-int memoria_restante;
+int memoria_restante = 4096;
 
 int main(int argc, char* argv[]) {
 
-    // Estableciendo conexiones
     saludar("memoria");
-    ObtenerConfig ();
-    logger = log_create ("memoria.log", "MEMORIA", true, log_level);
-    socket_cpu = EsperarConexion(socket_servidor);
-    socket_kernel = EsperarConexion(socket_servidor);
     
-    // Memory Allocate
+    // 1. CONFIGURACIÓN Y LOGGER
+    ObtenerConfig();
+    logger = log_create("memoria.log", "MEMORIA", true, log_level);
+    
+    // ========================================================
+    // 2. PREPARAR LA CASA (Inicializar estructuras)
+    // ========================================================
+    
+    // Memory Allocate (Idealmente usá calloc para que arranque en 0)
+    memoria_fisica = malloc(tam_memo); 
 
-    memoria_fisica = malloc(tam_memo);
+    // Creación del diccionario y Bitmap
+    de_pid_a_tabla = dictionary_create();
+    CrearBitmap();
 
-    //Prueba de lectura y escritura
+    // Pruebas locales (esto se ejecuta antes de que nadie se conecte)
     EscribirMemoria(0, "Hola Mundo");
     LeerMemoria(0, 10);
+    ReservarMemoriaParaProceso(1, 67);
+    LiberarProceso(1);
 
-    // Creación del diccionario para mapear PID a tabla de páginas
-    de_pid_a_tabla = dictionary_create();
+    // ========================================================
+    // 3. ABRIR LAS PUERTAS (Red)
+    // ========================================================
+
+    socket_servidor = IniciarServidor(puerto_escucha); 
+    
+    // Ahora sí esperamos a los clientes
+    log_info(logger, "Esperando conexiones...");
+    socket_cpu = EsperarConexion(socket_servidor);
+    log_info(logger, "Se conectó la CPU");
+    
+    socket_kernel = EsperarConexion(socket_servidor);
+    log_info(logger, "Se conectó el Kernel");
+
+    // ========================================================
+    // 4. ATENDER A LOS CLIENTES (Secuencial por ahora)
+    // ========================================================
+
+    // Recibo el mensaje (Alineado con el EnviarMensaje de CPU)
+    RecibirMensaje(socket_cpu);
+
+    // Recibo el paquete (Alineado con el EnviarPaquete de CPU)
+    t_list* paquete = RecibirPaquete(socket_cpu);
+
+    // ========================================================
+    // 5. APAGAR TODO ORDENADAMENTE
+    // ========================================================
+    
+    free(memoria_fisica);
+    dictionary_destroy(de_pid_a_tabla);
+    // Destruir bitmap, logger, config, etc...
 
     return 0;
 }
@@ -68,27 +105,38 @@ void CrearBitmap () {
     bitmap = bitarray_create_with_mode (contenido, cant_paginas, LSB_FIRST);
 }
 
-bool ReservarMemoriaParaProceso (int pid, int tam) {
-
-    if () {
-        memoria_restante -= tam;
-        
-
-
-        return true;
-    } else () {
-
-
-        return false
+bool ReservarMemoriaParaProceso(int pid, int tamanio) {
+    
+    // PASO 1: Verificar si hay espacio suficiente
+    if (tamanio > memoria_restante) {
+        log_warning(logger, "No hay memoria suficiente para el PID %d", pid);
+        return false; 
     }
-}
 
-int DeIntAString (int numero) {
+    // PASO 2: Descontar la memoria
+    memoria_restante -= tamanio;
 
-    int tam = ContarDigitos(numero);
-    char* str = malloc(tam + 1);
-    sprintf(str,tam + 1 , "%d", numero);
-    return str;
+    // PASO 3: Calcular cuántas páginas necesita
+    // Truco matemático de C para redondear hacia arriba divisiones enteras
+    int paginas_necesarias = (tamanio + tam_pag - 1) / tam_pag;
+
+    // PASO 4: Crear la tabla de páginas para este proceso
+    t_list* tabla_del_proceso = list_create();
+
+    // Acá cargamos contenido en nuevas páginas y vamos añadíendolas a la lista
+    for (int i = 0; i < paginas_necesarias; i++) {
+        
+        int* nueva_pagina = malloc(sizeof(int));
+        *nueva_pagina = i; //acá agregamos el contenido en si, en este caso nada más es el número de página
+        list_add(tabla_del_proceso, nueva_pagina);
+        log_debug(logger, "Cree el marco %d del proceso %d", i, pid);
+    }
+
+    char* pid_str = string_itoa(pid);
+    dictionary_put(de_pid_a_tabla, pid_str, tabla_del_proceso);
+    free(pid_str);
+
+    return true;
 }
 
 int ContarDigitos (int numero) {
@@ -100,4 +148,33 @@ int ContarDigitos (int numero) {
         contador++;
     }
     return contador;
+}
+
+void LiberarProceso(int pid) {
+
+    char* pid_str = string_itoa(pid);
+
+    // 2. Sacamos directamente la t_list* del diccionario
+    t_list* lista_de_frames = (t_list*) dictionary_remove(de_pid_a_tabla, pid_str);
+
+    // 3. Verificamos que exista
+    if (lista_de_frames == NULL) {
+        printf("Error: No hay páginas asignadas al PID %d\n", pid);
+        free(pid_str);
+        return; 
+    }
+
+    int cant_paginas = list_size(lista_de_frames);
+
+    // 5. Recorremos la lista y liberamos cada frame en el bitmap
+    for (int i = 0; i < cant_paginas; i++) {
+        
+        int* frame_asignado = (int*) list_get(lista_de_frames, i);
+        bitarray_clean_bit(bitmap, *frame_asignado);
+        log_debug(logger, "Libere el marco %d del proceso %d", i, pid);
+    }
+
+    memoria_restante += cant_paginas * tam_pag;
+    list_destroy_and_destroy_elements(lista_de_frames, free);
+    free(pid_str);
 }

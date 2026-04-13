@@ -31,6 +31,29 @@ int main(int argc, char* argv[]) {
     // IMPORTANTE: Un pequeño freno temporal
     sleep(10); 
     
+    //Ejemplo de envío de Mensaje
+
+    EnviarMensaje("Hola Memoria, necesito espacio", socket_memoria);
+    sleep (10);
+
+    //Ejemplo de envío de Paquete
+
+    int pid = 1;
+    int tamanio = 67;
+    // 1. Fabricás la caja vacía (con la etiqueta correcta)
+    t_paquete* mi_paquete = CrearPaquete(INICIAR_PROCESO); 
+
+    // 2. Metés las cosas adentro (usando la función que vimos antes)
+    CargarEnteroEnPaquete(mi_paquete, pid);
+    CargarEnteroEnPaquete(mi_paquete, tamanio);
+
+    // 3. Recién ahora se lo das al correo para enviarlo
+    EnviarPaquete(mi_paquete, socket_memoria);
+
+    // 4. Limpiás la caja original
+    EliminarPaquete(mi_paquete);
+
+    sleep (10);
     return 0;
 }
 
