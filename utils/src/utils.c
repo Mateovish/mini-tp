@@ -190,6 +190,11 @@ t_list* RecibirPaquete(int socket_cliente)
 	while(desplazamiento < size)
 	{
 		memcpy(&tamanio, buffer + desplazamiento, sizeof(int));
+        if (tamanio <= 0 || tamanio > size) {
+            log_error(logger, "Me llego un tamaño corrupto o imposible: %d bytes. Abortando desempaquetado.", tamanio);
+            free(buffer);
+            return NULL; // o manejar el error como prefieras
+}
 		desplazamiento+=sizeof(int);
 		char* valor = malloc(tamanio);
 		memcpy(valor, buffer+desplazamiento, tamanio);
@@ -198,6 +203,40 @@ t_list* RecibirPaquete(int socket_cliente)
 	}
 	free(buffer);
 	return valores;
+}
+
+t_list* RecibirPaqueteDeEnteros(int socket_cliente) {
+    int size;
+    int desplazamiento = 0;
+    void * buffer;
+    t_list* valores = list_create();
+    int tamanio;
+
+    buffer = RecibirBuffer(&size, socket_cliente);
+
+    while(desplazamiento < size) {
+        // 1. Leemos CUÁNTO pesa el dato que viene
+        memcpy(&tamanio, buffer + desplazamiento, sizeof(int));
+        desplazamiento += sizeof(int); // Avanzamos el cursor
+
+        // Validación de seguridad
+        if (tamanio <= 0 || tamanio > (size - desplazamiento)) {
+            log_error(logger, "Tamaño corrupto: %d bytes. Abortando.", tamanio);
+            free(buffer);
+            return valores; 
+        }
+
+        // 2. Leemos EL DATO en sí
+        void* valor = malloc(tamanio);
+        memcpy(valor, buffer + desplazamiento, tamanio);
+        desplazamiento += tamanio; // Avanzamos el cursor
+
+        // 3. Lo guardamos en la lista
+        list_add(valores, valor);
+    }
+
+    free(buffer);
+    return valores;
 }
 
 void RecibirMensaje(int socket_cliente) {

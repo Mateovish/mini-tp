@@ -31,11 +31,6 @@ int main(int argc, char* argv[]) {
     // IMPORTANTE: Un pequeño freno temporal
     sleep(10); 
     
-    //Ejemplo de envío de Mensaje
-
-    EnviarMensaje("Hola Memoria, necesito espacio", socket_memoria);
-    sleep (10);
-
     //Ejemplo de envío de Paquete
 
     int pid = 1;

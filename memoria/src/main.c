@@ -55,9 +55,6 @@ int main(int argc, char* argv[]) {
     // 4. ATENDER A LOS CLIENTES (Secuencial por ahora)
     // ========================================================
 
-    // Recibo el mensaje (Alineado con el EnviarMensaje de CPU)
-    RecibirMensaje(socket_cpu);
-
     // Recibo el paquete (Alineado con el EnviarPaquete de CPU)
     t_list* paquete = RecibirPaquete(socket_cpu);
 
