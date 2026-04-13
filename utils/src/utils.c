@@ -15,6 +15,19 @@ int EsperarConexion (int socket_servidor) {
     return socket_cpu;
 }
 
+void RecibirEntero (int socket_emisor) {
+
+    int numero;
+    recv(socket_emisor, &numero, sizeof(int), 0);
+    log_info(logger, "Recibi el numero %d", numero);
+}
+
+void EnviarEntero (int socket_receptor, int ent) {
+
+    send(socket_receptor, &ent, sizeof(int), 0);
+    log_info(logger, "Envié el numero %d", ent);
+}
+
 int CrearConexion (char *ip, char* puerto) {
 
     struct addrinfo hints;
