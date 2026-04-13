@@ -5,6 +5,10 @@
 #include <unistd.h>
 
 t_log* logger;
+typedef struct {
+    int cant_paginas;
+    int entradas;
+} t_tabla_paginas;
 
 int EsperarConexion (int socket_servidor) {
 

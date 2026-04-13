@@ -9,6 +9,8 @@
 #include <commons/config.h>
 #include <commons/string.h>
 #include <stdlib.h>
+#include <commons/collections/dictionary.h>
+#include <commons/bitarray.h>
 
 extern t_log* logger;
 void saludar(char* quien);
